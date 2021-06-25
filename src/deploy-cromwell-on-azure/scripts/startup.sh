@@ -115,6 +115,20 @@ done
 write_log "Account access OK"
 write_log
 
+
+tempmountpoint="/mnt"
+write_log "Validating if /mnt is available."
+validation_results=$(df -h | grep "/mnt$")
+
+until [[ ${validation_results} == *$tempmountpoint ]];
+do
+    sleep 1
+    write_log "Validating if /mnt is available."
+    validation_results=$(df -h |  grep "/mnt$")
+done
+
+write_log "Confirmed /mnt is available."
+
 write_log "Mounting containers (default storage account = $storage_account_name)"
 ./mount_containers.sh -a $storage_account_name -c $managed_identity_client_id
 write_log

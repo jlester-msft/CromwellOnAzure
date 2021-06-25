@@ -44,7 +44,9 @@ else
     write_log "Error mounting $1. Either the account key or the SAS token must be specified." && exit 1
 fi
 
-error_message=$(/usr/bin/blobfuse $1 --tmp-path=$tmp_dir -o nonempty -o attr_timeout=240 -o entry_timeout=240 -o negative_timeout=120 -o allow_other --container-name=$container_name --log-level=LOG_CRIT 2>&1 > /dev/null) && fuse_exit_code=0 || fuse_exit_code=$?
+sleep 10
+
+error_message=$(/usr/bin/blobfuse $1 --tmp-path=$tmp_dir -o nonempty -o attr_timeout=240 -o entry_timeout=240 -o negative_timeout=120 -o allow_other --container-name=$container_name --log-level=LOG_DEBUG 2>&1 > /dev/null) && fuse_exit_code=0 || fuse_exit_code=$?
 
 if [[ $fuse_exit_code != 0 ]]; then
     if [[ $account_key != "" ]]; then

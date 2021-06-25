@@ -86,6 +86,6 @@ if [ ! -L "/cromwellazure" ]; then
 fi
 
 write_log "Enabling cromwellazure service"
-sudo systemctl enable cromwellazure.service
+sudo systemctl enable /cromwellazure/cromwellazure.service
 
 write_log "Install complete"
