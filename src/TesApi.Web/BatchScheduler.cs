@@ -45,6 +45,10 @@ namespace TesApi.Web
         private readonly string batchNodesSubnetId;
         private readonly bool disableBatchNodesPublicIpAddress;
         private readonly BatchNodeInfo batchNodeInfo;
+        private readonly DrsResolver drsResolver;
+        private readonly string marthaHostUrl;
+        private readonly string marthaTokenAzureKeyVaultUrl;
+        private readonly string marthaTokenAzureKeyVaultSecret;
 
         /// <summary>
         /// Orchestrates <see cref="TesTask"/>s on Azure Batch
@@ -58,6 +62,8 @@ namespace TesApi.Web
             this.logger = logger;
             this.azureProxy = azureProxy;
             this.storageAccessProvider = storageAccessProvider;
+            
+            this.drsResolver = new DrsResolver();
 
             static bool GetBoolValue(IConfiguration configuration, string key, bool defaultValue) => string.IsNullOrWhiteSpace(configuration[key]) ? defaultValue : bool.Parse(configuration[key]);
             static string GetStringValue(IConfiguration configuration, string key, string defaultValue) => string.IsNullOrWhiteSpace(configuration[key]) ? defaultValue : configuration[key];
@@ -458,7 +464,36 @@ namespace TesApi.Web
                 .Where(qs => !string.IsNullOrEmpty(qs))
                 .ToList();
 
-            var inputFiles = task.Inputs.Distinct();
+            // order DRS urls first, so that they are downloaded first
+            var inputFiles = task.Inputs
+                .Distinct()
+                .OrderByDescending(f => f?.Url?.StartsWith("drs://", StringComparison.OrdinalIgnoreCase) == true)
+                .ToList();
+
+            var drsInputFiles = inputFiles.Where(f => f?.Url?.StartsWith("drs://", StringComparison.OrdinalIgnoreCase) == true);
+
+            if (drsInputFiles.Any())
+            {
+                var marthaResolver = new MarthaResolver(marthaHostUrl);
+
+                var marthaBearerToken = await new AzureKeyVaultClient().GetSecretAsync(
+                    marthaTokenAzureKeyVaultUrl,
+                    marthaTokenAzureKeyVaultUrl,
+                    task.GetTaskExecutionIdentity());
+
+                var marthaObjects = new List<(string, string, long)>();
+
+                foreach (var drsInputFile in drsInputFiles)
+                {
+                    // 1.  Resolve drs:// to https://
+                    drsInputFile.Url = await marthaResolver.ResolveUrlAsync(drsInputFile.Url, marthaBearerToken);
+                }
+                
+                // TODO sort inputFiles again by drs:// descending, then by file size ascending,
+                // so that the smallest DRS files are downloaded first,
+                // making it more likely that all SAS token urls start their downloads before expiring
+            }
+
             var cromwellExecutionDirectoryPath = GetCromwellExecutionDirectoryPath(task);
 
             if (cromwellExecutionDirectoryPath == null)

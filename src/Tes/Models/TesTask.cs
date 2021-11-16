@@ -112,11 +112,21 @@ namespace Tes.Models
         /// <returns>True if a task execution identity key and value were specified; false otherwise</returns>
         public bool ContainsTaskExecutionIdentity()
         {
-            return this
-                ?.Resources
+            return GetTaskExecutionIdentity() is not null;
+        }
+
+        /// <summary>
+        /// Checks if a task execution identity was specified
+        /// </summary>
+        /// <returns>True if a task execution identity key and value were specified; false otherwise</returns>
+        public string GetTaskExecutionIdentity()
+        {
+            string identityClientId = null;
+            this?.Resources
                 ?.BackendParameters
-                ?.TryGetValue(TesResources.BackendParameters_TaskExecutionIdentityKey, out string identityResourceId) == true
-                && !string.IsNullOrWhiteSpace(identityResourceId);
+                ?.TryGetValue(TesResources.BackendParameters_TaskExecutionIdentityKey, out identityClientId);
+
+            return identityClientId;
         }
 
         /// <summary>
